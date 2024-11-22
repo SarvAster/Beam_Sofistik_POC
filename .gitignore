@@ -1,6 +1,0 @@
-# .gitignore
-build/
-dist/
-*.exe
-*.pkg
-*.pyc
