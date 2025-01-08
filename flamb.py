@@ -1,3 +1,7 @@
+"""
+The flamb.py script handles the iteration on a .dat file
+"""
+
 import sys
 import os
 from ctypes import *
@@ -6,7 +10,7 @@ import re
 import subprocess
 from sofistik_daten import *
 
-
+# Class used for the dat file mofification and information retrieval
 class FileInteraction:
     def __init__(self, file_path):
         self.file_path = file_path
@@ -22,6 +26,9 @@ class FileInteraction:
             return False
 
     def extract_value(self, search_string):
+        """
+        extract the value after the input string
+        """
         try:
             # Read the file content
             with open(self.file_path, 'r') as file:
@@ -46,6 +53,9 @@ class FileInteraction:
             print(f"An error occurred: {e}")
 
     def modify(self, search_string, new_value):
+        """
+        Replace a given string with a new value
+        """
         try:
             # Read the file content
             with open(self.file_path, 'r') as file:
@@ -84,8 +94,10 @@ class FileInteraction:
         except Exception as e:
             print(f"An error occurred: {e}")
 
-
     def modify_coord(self, node_num, x_new, y_new, z_new):
+        """
+        Modifiy the node coordinates in the dat file
+        """
         try:
             with open(self.file_path, 'r') as file:
                 content = file.read()
@@ -113,6 +125,9 @@ class FileInteraction:
             print(f"An error occurred: {e}")
 
     def add_code(self):
+        """
+        Add CADINP code responsible for linear calculation
+        """
         code_block = """
 +PROG ASE urs:9 $ Linear Analysis
 HEAD Calculation of forces and moments
@@ -210,6 +225,9 @@ END
     # Script to replace 'PROG SOFILOAD' sections with new content
 
     def replace_sofiload(self):
+        """
+        replace the sofiload loading module
+        """
         # New SOFILOAD content to replace with
         new_load = """
 PROG SOFILOAD urs:3
@@ -277,6 +295,7 @@ END
         with open(self.file_path, 'w') as outfile:
             outfile.writelines(output_lines)
 
+# Class to interact with the sofistik database (CDB)
 class CDBinteract:
     def __init__(self):
         """
@@ -341,7 +360,7 @@ class CDBinteract:
 
     def get_u(self):
         """
-        Get the displacement data from the CDB.
+        Get the node displacement data from the CDB.
         """
         ie = c_int(0)
         RecLen = c_int(sizeof(cn_disp))
@@ -382,7 +401,7 @@ class CDBinteract:
 
     def get_pos(self):
         """
-        Get the positions from the CDB.
+        Get the node positions from the CDB.
         """
         ie = c_int(0)
         RecLen = c_int(sizeof(cnode))
@@ -408,6 +427,7 @@ class CDBinteract:
             print("No positions found.")
             return None
 
+# Class to handle calculations on the dat file
 class SofiFileHandler:
     def __init__(self):
         """
@@ -484,7 +504,7 @@ class SofiFileHandler:
         except Exception as e:
             print(f"Error during SOFiSTiK execution: {e}")
 
-
+# Class defining initialisation and loop functions to iterate on the dat file
 class Iteration:
     def __init__(self, V, H, epsilon, cdb_file_path, dat_file, sofistik_path):
         self.epsilon = epsilon
@@ -503,6 +523,12 @@ class Iteration:
         self.H = H
 
     def initialize(self):
+        """
+        Initilisation of the process: 
+        Modifying the dat to make it iterable by changing load and adding the ASE module
+        Retrieving initial data
+        Launching first calculation
+        """
         # load dat, replace sofiload, and add linear analysis to DAT file
         DAT_interaction = FileInteraction(self.dat_file)
         DAT_interaction.replace_sofiload()
@@ -528,6 +554,10 @@ class Iteration:
         first_iteration.calculate_with_sps()
         
     def loop(self):
+        """
+        Looping function updating position and computing displacement
+        Stops under epsilon threshold
+        """
         delta_ux = self.epsilon + 1        
         DAT_interaction = FileInteraction(self.dat_file)
 

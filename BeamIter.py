@@ -1,3 +1,7 @@
+"""
+QT GUI to execute the flamb.py script
+"""
+
 import sys
 import os
 import threading
@@ -9,6 +13,7 @@ from PySide6.QtWidgets import (
     QTextEdit, QFileDialog, QMessageBox, QVBoxLayout, QHBoxLayout, QDialog, QFormLayout
 )
 
+# Dialog window for configuring SOFiSTiK installation path.
 class ConfigurationDialog(QDialog):
     def __init__(self, current_sofistik_path, parent=None):
         super().__init__(parent)
@@ -17,6 +22,9 @@ class ConfigurationDialog(QDialog):
         self.setup_ui()
 
     def setup_ui(self):
+        """
+        Set up the user interface elements for this dialog
+        """
         layout = QFormLayout()
         layout.setContentsMargins(5, 5, 5, 5)  # minimal margins
         layout.setSpacing(5)  # minimal spacing
@@ -48,17 +56,24 @@ class ConfigurationDialog(QDialog):
         self.setLayout(layout)
 
     def browse_sofistik(self):
+        """
+        Open a directory selection dialog to pick the SOFiSTiK installation directory
+        """
         directory = QFileDialog.getExistingDirectory(self, "Select SOFiSTiK Installation Directory")
         if directory:
             self.sofistik_path_edit.setText(directory)
 
     def accept(self):
+        """
+        Validate the chosen path before closing the dialog, or show error if invalid
+        """
         self.sofistik_path = self.sofistik_path_edit.text()
         if not os.path.isdir(self.sofistik_path):
             QMessageBox.critical(self, "Input Error", "Please select a valid directory.")
             return
         super().accept()
 
+#  A helper class to redirect text output (stdout/stderr) to a QTextEdit widget
 class StreamToTextEdit(QObject):
     text_written = Signal(str)
 
@@ -66,13 +81,16 @@ class StreamToTextEdit(QObject):
         super().__init__(parent)
 
     def write(self, message):
-        # Emit signal for each line
+        """
+        Write a message. Emits a signal for each line of text.
+        """
         for line in message.splitlines():
             self.text_written.emit(line.strip())
 
     def flush(self):
         pass
 
+#The main application window for the SOFiSTiK Processor GUI.
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -88,6 +106,9 @@ class MainWindow(QMainWindow):
         sys.stderr = self.stdout_stream
 
     def load_sofistik_path(self):
+        """
+        Load the SOFiSTiK path from config.ini. Show a warning message if not found.
+        """
         config = configparser.ConfigParser()
         config.read('config.ini')
         if 'SOFiSTiK' in config and 'sofistik_path' in config['SOFiSTiK']:
@@ -98,7 +119,9 @@ class MainWindow(QMainWindow):
             return ""
 
     def setup_ui(self):
-        # Central widget
+        """
+        Set up the main UI components (buttons, text entries, etc.) for the application.
+        """
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
 
@@ -160,12 +183,18 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.output_text)
 
     def browse_file(self):
+        """
+        Open a file dialog to pick a .dat file and display its path in file_entry.
+        """
         file_path, _ = QFileDialog.getOpenFileName(self, "Select .dat File", "", "DAT Files (*.dat)")
         if file_path:
             self.file_entry.setText(file_path)
             print(f".dat file path set to: {file_path}")
 
     def run_process(self):
+        """
+        Validate user input and start the iteration process in a separate thread
+        """
         # Clear previous output
         self.output_text.clear()
 
@@ -204,7 +233,9 @@ class MainWindow(QMainWindow):
         ).start()
 
     def execute_script(self, V, H, epsilon, dat_file):
-        # Perform the calculation process with Iteration from flamb
+        """
+        Execute the iteration process from flamb.Iteration in a background thread.
+        """
         try:
             cdb_file_path = dat_file.replace('.dat', '.cdb')
             iteration = Iteration(V, H, epsilon, cdb_file_path, dat_file, self.sofistik_path)
@@ -219,11 +250,16 @@ class MainWindow(QMainWindow):
             self.config_button.setEnabled(True)
 
     def append_output_text(self, message):
-        # Append text to the output_text widget
+        """
+        Append incoming messages to the output_text widget
+        """
         if message:
             self.output_text.append(message)
 
     def open_configuration_dialog(self):
+        """
+        Display the configuration dialog to set the SOFiSTiK path
+        """
         dialog = ConfigurationDialog(self.sofistik_path, self)
         if dialog.exec():
             # Update configuration and paths
@@ -232,18 +268,26 @@ class MainWindow(QMainWindow):
             print("SOFiSTiK path updated to {}".format(self.sofistik_path))
 
     def save_sofistik_path(self, sofistik_path):
+        """
+        Save the updated SOFiSTiK path to config.ini
+        """
         config = configparser.ConfigParser()
         config['SOFiSTiK'] = {'sofistik_path': sofistik_path}
         with open('config.ini', 'w') as configfile:
             config.write(configfile)
 
     def closeEvent(self, event):
-        # Restore original stdout and stderr
+        """
+        Restore stdout/stderr and finalize the window close event
+        """
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         super().closeEvent(event)
 
 def main():
+    """
+    Entry point for the application. Creates and shows the main window.
+    """
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
